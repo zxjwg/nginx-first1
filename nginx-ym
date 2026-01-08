@@ -20,12 +20,13 @@ echo "正在检查环境..."
 sudo apt update && sudo apt install -y nginx certbot python3-certbot-nginx
 
 # 3. 如果配置文件不存在，先创建一个标准模板
+# 注意：这里使用了 'EOF' 来防止 shell 误解析变量
 if [ ! -f "$NGINX_CONF" ]; then
     echo "正在初始化 Nginx 配置..."
-    sudo bash -c "cat > $NGINX_CONF <<EOF
+    sudo bash -c "cat > $NGINX_CONF <<'EOF'
 server {
     listen 80;
-    server_name $new_domain;
+    server_name \$new_domain;
 
     location / {
         proxy_pass http://127.0.0.1:3000;
