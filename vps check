@@ -1,0 +1,36 @@
+cat > check.sh <<'EOF'
+#!/bin/bash
+echo "=== 系统状态体检报告 ==="
+
+# 1. 检查 Nginx
+if systemctl is-active --quiet nginx; then
+    echo "[ OK ] Nginx 正在运行"
+else
+    echo "[ !! ] Nginx 已停止"
+fi
+
+# 2. 检查 Sing-box
+if systemctl is-active --quiet sing-box; then
+    echo "[ OK ] Sing-box 正在运行"
+else
+    echo "[ !! ] Sing-box 已停止"
+fi
+
+# 3. 检查 New API (Docker)
+if docker ps | grep -q "new-api"; then
+    echo "[ OK ] New API 容器正常"
+else
+    echo "[ !! ] New API 容器未启动"
+fi
+
+# 4. 检查 443 端口占用
+PORT_443=$(sudo lsof -i:443 -t)
+if [ -n "$PORT_443" ]; then
+    PROC=$(ps -p $PORT_443 -o comm=)
+    echo "[ OK ] 443 端口由 $PROC 占据"
+else
+    echo "[ !! ] 443 端口未开放"
+fi
+EOF
+
+chmod +x check.sh
