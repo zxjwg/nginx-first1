@@ -1,21 +1,27 @@
 #!/bin/bash
 
-# 定义路径
+# 定义配置路径
 NGINX_CONF="/etc/nginx/sites-available/api_proxy"
 NGINX_LINK="/etc/nginx/sites-enabled/api_proxy"
 
+echo "=== ZXJ AI 商业平台一键部署脚本 ==="
+
 # 1. 交互获取输入
 read -p "请输入你的域名 (例如 ai.zxj.edu.kg): " new_domain
-read -p "请输入你的邮箱 (可选，直接回车跳过): " email
+read -p "请输入你的邮箱 (直接回车则跳过): " email
 
 if [ -z "$new_domain" ]; then
     echo "错误: 域名不能为空。"
     exit 1
 fi
 
-# 2. 检查并创建基础配置文件
+# 2. 检查并安装必要软件
+echo "正在检查环境..."
+sudo apt update && sudo apt install -y nginx certbot python3-certbot-nginx
+
+# 3. 如果配置文件不存在，先创建一个标准模板
 if [ ! -f "$NGINX_CONF" ]; then
-    echo "正在创建基础 Nginx 配置文件..."
+    echo "正在初始化 Nginx 配置..."
     sudo bash -c "cat > $NGINX_CONF <<EOF
 server {
     listen 80;
@@ -34,24 +40,24 @@ server {
 EOF"
 fi
 
-# 3. 确保建立了软链接
+# 4. 确保建立了 Nginx 软链接
 if [ ! -L "$NGINX_LINK" ]; then
-    echo "正在建立 Nginx 软链接..."
+    echo "正在启用配置..."
     sudo ln -s $NGINX_CONF $NGINX_LINK
 fi
 
-# 4. 修改域名（以防文件已存在但域名不对）
+# 5. 更新域名（确保 sed 正常工作）
 sudo sed -i "s/server_name .*;/server_name $new_domain;/" $NGINX_CONF
 
-# 5. 检查 Nginx 语法
+# 6. 检查 Nginx 语法并重载
 if sudo nginx -t; then
     sudo systemctl reload nginx
 else
-    echo "错误: Nginx 配置语法检查失败，请检查输出信息。"
+    echo "错误: Nginx 配置检查失败。"
     exit 1
 fi
 
-# 6. 申请 SSL 证书
+# 7. 申请 SSL 证书
 echo "正在向 Let's Encrypt 申请 SSL 证书..."
 if [ -z "$email" ]; then
     sudo certbot --nginx -d $new_domain --agree-tos --register-unsafely-without-email --redirect --non-interactive
@@ -59,7 +65,7 @@ else
     sudo certbot --nginx -d $new_domain --email $email --agree-tos --no-eff-email --redirect --non-interactive
 fi
 
-echo "------------------------------------------------"
-echo "恭喜！站点已成功部署至: https://$new_domain"
-echo "后端已指向本地 3000 端口 (New API)"
-echo "------------------------------------------------"
+echo "================================================"
+echo "🎉 恭喜！站点已成功部署至: https://$new_domain"
+echo "后端已指向本地 3000 端口，请确保 New API 容器已启动。"
+echo "================================================"
